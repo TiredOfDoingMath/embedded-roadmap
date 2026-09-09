@@ -1,4 +1,4 @@
-#include "stm32c031xx.h"
+#include "stm32c0xx.h"
 
 int main(void)
 {
