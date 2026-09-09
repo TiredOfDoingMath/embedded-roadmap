@@ -1,5 +1,5 @@
 //Blinking an LED with a PWM using the general timers on the register level
-#include "stm32c031xx.h"
+#include "stm32c0xx.h"
 
 int main(void){
 
