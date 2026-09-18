@@ -1,4 +1,14 @@
 
+
+#define Port_A 0
+#define Port_B 1
+#define Port_C 2
+#define Port_D 3
+#define Port_F 5
+#define risingEdge true;
+#define fallingEdge false;
+
+
 //***function to reset all EXTICR modes***
 
 //each register (1,2,3,4) corresponds to (0,1,2,3) in the array
@@ -6,107 +16,57 @@
 // pins in each register do not overlap 
 
 
-//if we want to change between GPIO peripherals
-// we can call this function first to set a quadrant
-// to peripheral A which has value 0x00
-void resetA(uint8_t pos, uint8_t quad) {
-    switch (quad) {
-    case 1:
-    EXTI -> EXTICR[pos] &= ~(0xFUL << 0);
-    if(pos == 0) {
-      EXTI -> EXTICR[pos] &= ~(1UL << 5);
-    }
-    break;
-    case 2:
-     EXTI -> EXTICR[pos] &= ~(0xFUL << 8);
-    if(pos == 0) {
-      EXTI -> EXTICR[pos] &= ~(1UL << 13);
-    }
-    break;
-    case 3:
-    EXTI -> EXTICR[pos] &= ~(0xFUL << 16);
-    if(pos == 0) {
-      EXTI -> EXTICR[pos] &= ~(1UL << 21);
-    }
-    break;
-    case 4:
-    EXTI -> EXTICR[pos] &= ~(0xFUL << 24);
-    if(pos == 0) {
-      EXTI -> EXTICR[pos] &= ~(1UL << 29);
-    }
-    break;
-    default:
-  }
+//this is a better implementation of a reset function
+static void reset(uint8_t Register, uint8_t quad) {
+  uint8_t shift = 8 * (quad - 1);
+  EXTI -> EXTICR[Register] &= ~(0xFUL << shift);
 }
 
-void setB(uint8_t pos, uint8_t quad) {
-  switch (quad) {
-    case 1:
-    EXTI -> EXTICR[pos] |= (1UL << 0);
+// a much better implementation of setting ports
+void set(uint8_t Register, uint8_t quad, uint8_t port) {
+   uint8_t shift = 8 * (quad - 1);
+   reset(Register, quad);
+   switch (port) {
+    case Port_A:
+    //do nothing we are already in this state
     break;
-    case 2:
-    EXTI -> EXTICR[pos] |= (1UL << 8);
+    case Port_B:
+    EXTI -> EXTICR[Register] |= (1UL << shift);
     break;
-    case 3:
-    EXTI -> EXTICR[pos] |= (1UL << 16);
+    case Port_C:
+    EXTI -> EXTICR[Register] |= (2UL << shift);
     break;
-    case 4:
-    EXTI -> EXTICR[pos] |= (1UL << 24);
+    case Port_D:
+    EXTI -> EXTICR[Register] |= (3UL << shift);
     break;
+    case Port_F:
+    EXTI -> EXTICR[Register] |= (5UL << shift);
     default:
-  }
+    break;
+   }
 }
 
-void setC(uint8_t pos, uint8_t quad) {
-  switch (quad) {
-    case 1:
-    EXTI -> EXTICR[pos] |= (1UL << 1);
-    break;
-    case 2:
-    EXTI -> EXTICR[pos] |= (1UL << 9);
-    break;
-    case 3:
-    EXTI -> EXTICR[pos] |= (1UL << 17);
-    break;
-    case 4:
-    EXTI -> EXTICR[pos] |= (1UL << 25);
-    break;
-    default:
+
+typedef struct {
+  EXTI_TypeDef *ptr;
+  uint8_t line;
+} edgeConfig;
+
+//turning on and off and configuring rising edge and falling edge event/interrupt trigger
+void config(edgeConfig *self, bool edge, bool enable) {
+  if(edge == risingEdge && enable == true) {
+    self -> ptr -> FTSR1 &= ~(1UL << self -> line);
+    self -> ptr -> RTSR1 |= (1UL << self -> line);
+  } else if(edge == fallingEdge && enable == true) {
+    self -> ptr -> RTSR1 &= ~(1UL << self -> line);
+    self -> ptr -> FTSR1 |= ~(1UL << self -> line);
+  } else if(enable == false) {
+    self -> ptr -> FTSR1 &= ~(1UL << self -> line);
+    self -> ptr -> RTSR1 &= ~(1UL << self -> line);
   }
+}
+//software event/interrupt trigger (cleared by hardware automatically)
+void fireSWE(edgeConfig *self) {
+  self -> ptr -> SWIER1 |= (1UL << self -> line);
 }
 
-void setD(uint8_t pos, uint8_t quad) {
-  switch (quad) {
-    case 1:
-    EXTI -> EXTICR[pos] |= (1UL << 2);
-    break;
-    case 2:
-    EXTI -> EXTICR[pos] |= (1UL << 10);
-    break;
-    case 3:
-    EXTI -> EXTICR[pos] |= (1UL << 18);
-    break;
-    case 4:
-    EXTI -> EXTICR[pos] |= (1UL << 26);
-    break;
-    default:
-  }
-}
-
-void setF(uint8_t quad) {
-  switch (quad) {
-    case 1:
-    EXTI -> EXTICR[0] |= (1UL << 2);
-    break;
-    case 2:
-    EXTI -> EXTICR[0] |= (1UL << 10);
-    break;
-    case 3:
-    EXTI -> EXTICR[0] |= (1UL << 18);
-    break;
-    case 4:
-    EXTI -> EXTICR[0] |= (1UL << 26);
-    break;
-    default:
-  }
-}
